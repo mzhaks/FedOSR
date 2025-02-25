@@ -1,3 +1,13 @@
 venv/
+env/
+dataset/
 __pycache__/
+Fedoss/__pycache__/
 *.pyc
+*.pth
+*.pt
+*.ckpt
+*.hdf5
+*.npz
+*.tar.gz
+*.zip
