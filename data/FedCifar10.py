@@ -23,7 +23,6 @@ class FedCifar10():
         print(f"Unknown classes: {self.unknown_class_list}")
     
     def split_known_unknown_classes(self, total_class):
-        # np.random.seed(42)
         class_list = np.arange(total_class)
         np.random.seed(42)
         np.random.shuffle(class_list)
