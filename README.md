@@ -5,7 +5,7 @@ This repository contains the implementation of **FedOSR (Federated Open Set Reco
 ## 🚀 Getting Started
 
 ### **Clone the Repository**
-First, clone this repository and navigate into the project directory:
+Clone this repository and navigate into the project directory:
 ```sh
 git clone https://github.com/mzhaks/FedOSR.git
 cd FedOSR
