@@ -1,6 +1,8 @@
 venv/
 env/
 dataset/
+data/cifar-10-python.tar.gz
+data/cifar-10-batches-py
 __pycache__/
 Fedoss/__pycache__/
 *.pyc
@@ -11,3 +13,4 @@ Fedoss/__pycache__/
 *.npz
 *.tar.gz
 *.zip
+
