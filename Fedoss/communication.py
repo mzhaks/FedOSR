@@ -69,9 +69,9 @@ def compute_global_statistic(args, mean_clients, cov_clients, number_clients):
 
 def communication_Finetune(args, server_model, models, client_weights, mean_clients, cov_clients, number_clients, unknown_dis):
     if mean_clients:
-        mean_clients = torch.stack(mean_clients)    # (args.num_client, args.known_class, 4096,)
-        cov_clients = torch.stack(cov_clients)      # (args.num_client, args.known_class, 4096, 4096)
-        number_clients = torch.stack(number_clients) # (args.num_client, args.known_class)
+        mean_clients = torch.stack(mean_clients)    
+        cov_clients = torch.stack(cov_clients)    
+        number_clients = torch.stack(number_clients) 
         unknown_dis = compute_global_statistic(args, mean_clients, cov_clients, number_clients)
 
     with torch.no_grad():
