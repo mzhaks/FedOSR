@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--eps', type=float, default=1., help='Epsilon for attack')
     parser.add_argument('--num_steps', type=int, default=10, help='Number of steps for attack')
     parser.add_argument('--unknown_weight', type=float, default=1., help='Weight for unknown classes')
-    parser.add_argument('--start_epoch', type=str, default=[1, 4, 8, 10, 12], help='Epochs to start from')
+    parser.add_argument('--start_epoch', type=str, default=[2, 4, 8, 10, 12], help='Epochs to start from')
     parser.add_argument('--sample_from', type=int, default=8, help='Sample from')
     return parser.parse_args()
 
@@ -65,12 +65,6 @@ def main():
 
     # Set up random seed for reproducibility
     set_seed(args.seed)
-
-    # # Create the save path for model outputs
-    # args.save_path = create_save_path(args)
-
-    # # Log the arguments for clarity
-    # pprint(vars(args))
 
     # Select the correct function based on the mode (Pretrain/Finetune)
     run_stage = load_stage_run(args.mode)

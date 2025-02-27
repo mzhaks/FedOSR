@@ -26,19 +26,16 @@ def train(args, epoch, model, trainloader):
         outputs  = model(img)
         output = outputs['outputs']
         aux_output = outputs['aux_out']
-        # print(aux_output.shape, output.shape,labels.shape, labels)
         
         loss = criterion(output, labels)
         loss += criterion(aux_output, labels)
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
-        # print(outputs.shape)
         value , indices = output[:,:args.known_class].max(1)
 
         pred.extend(indices.cpu().numpy().tolist())
         label.extend(labels.cpu().numpy().tolist())
-        # output_list.append(F.softmax(outputs, dim=-1).cpu().detach().numpy())
     loss_avg = train_loss/(batch_id+1)
     mean_acc = 100*metrics.accuracy_score(label, pred)
     precision = 100*metrics.precision_score(label, pred, average='macro', zero_division=0)    

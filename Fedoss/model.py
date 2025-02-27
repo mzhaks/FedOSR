@@ -174,6 +174,7 @@ class ResNet(nn.Module):
     def aux_forward(self, x):
         """Forward pass through the auxiliary branch"""
         x = self.auxiliary_layer4(x)
+        # print("aux",x.shape)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         aux_out = self.auxiliary_cls(x)
@@ -192,20 +193,20 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        x = self.maxpool(x)   
 
         x = self.layer1(x)
         x = self.layer2(x)
-        x = self.layer3(x)
+        x = self.layer3(x)        # X.shape (16, 192,4,4)   
 
         # Extract auxiliary boundary features
         aux_out = self.aux_forward(x.detach())
 
-        boundary_feats = x
-        discrete_feats = x
+
+        boundary_feats = x    
+        discrete_feats = x    
 
         x = self.layer4(x)
-        # print(x.shape)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         outputs = self.main_cls(x)

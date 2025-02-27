@@ -20,9 +20,6 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
 
     for peer_net in net_peers:
         peer_net.eval()
-    
-    
-    # optimizer = torch.optim.Adam(model.parameters())
 
     train_loss = 0
     pred, label, output_list = [], [], []
@@ -41,68 +38,62 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
     number_dict = torch.zeros(args.known_class)
 
     for batch_id, (img, labels) in enumerate(trainloader):
-        # print(img.shape, labels.shape)    # img, labels : shape : (16, 3, 64, 64), (16,)
         gc.collect()
         torch.cuda.empty_cache()
         img, labels = img.to(device), labels.to(device)
-        # optimizer.zero_grad()
         model = model.to(device)
         outputs  = model(img)
         output = outputs['outputs']
         aux_output = outputs['aux_out']
         boundary_feats = outputs['boundary_feats'] 
         discrete_feats = outputs['discrete_feats']
-        # print(output.shape, aux_output.shape, boundary_feats.shape, discrete_feats.shape)
         loss = criterion(output, labels)
         loss += criterion(aux_output, labels)
         if epoch>=0:
             # Client-Inconcictencies based boundary Samples recognition
             net_peers_sample = random.sample(net_peers, net_peers_sample_number)
-            _, aux_pred = aux_output.max(1)   # aux_pred.shape (16,)
-            aux_preds_peers = torch.eq(aux_pred, labels).float()  # (16,)
+            _, aux_pred = aux_output.max(1)   
+            aux_preds_peers = torch.eq(aux_pred, labels).float()  
             # print(aux_preds_peers)
             assert len(net_peers)== (args.num_client-1)
             for idx, peer_net in enumerate(net_peers_sample):
                 with torch.no_grad():
                     outs_peer = peer_net.aux_forward(boundary_feats.clone().detach())
-                    aux_out_peer = outs_peer['aux_out']   # (16,10)
-                    _, aux_pred_peer = aux_out_peer.max(1)  #( 16,)
+                    aux_out_peer = outs_peer['aux_out']   
+                    _, aux_pred_peer = aux_out_peer.max(1)  
                     aux_preds_peers += torch.eq(aux_pred_peer, labels).float()
             is_boundary_upper = torch.lt(aux_preds_peers/(net_peers_sample_number+1), p_upper)
             is_boundary_lower = torch.gt(aux_preds_peers/(net_peers_sample_number+1), p_lower)
-            is_boundary = is_boundary_lower & is_boundary_upper  #(16,)
+            is_boundary = is_boundary_lower & is_boundary_upper 
 
             if is_boundary.sum() > 0:
-                discrete_feats = discrete_feats[is_boundary]      # is_boundary.sum() is the number of images in current  batch_id of batch 16 of 16 which are boundary images
-                # print("jesa ki kha tha mene ", discrete_feats.shape)   # shape (is_boundary.sum(), 256, 4, 4)
-                discrete_targets = labels[is_boundary]                  # shape (is_boundary.sum(), )
-                inputs_unknown, targets_unknown = attack.i_DUS(model, discrete_feats, discrete_targets) # (is_boundary.sum(), 256,4,4),  (is_boundary.sum(),)
+                discrete_feats = discrete_feats[is_boundary]      
+                discrete_targets = labels[is_boundary]                 
+                inputs_unknown, targets_unknown = attack.i_DUS(model, discrete_feats, discrete_targets) 
                 if inputs_unknown is not None:                                        
                     outs_unknown = model.discrete_forward(inputs_unknown.clone().detach()) 
-                    outputs_unknown = outs_unknown['outputs']   #(is_boundary.sum(), 11 )  logits
+                    outputs_unknown = outs_unknown['outputs']  
                     # probabilistic distance
-                    prob_unknown = torch.softmax(outputs_unknown,dim=-1)   # (is_boundary.sum(), 11 )  normalised probabilities of logits
-                    PDs = prob_unknown[:,-1] - prob_unknown[:,:-1].max(-1)[0]    #                  
+                    prob_unknown = torch.softmax(outputs_unknown,dim=-1)   
+                    PDs = prob_unknown[:,-1] - prob_unknown[:,:-1].max(-1)[0]                    
                     gt_unknown=torch.ones(outputs_unknown.shape[0]).long().to(device)*args.known_class                
                     for i in range(len(outputs_unknown)):
                         nowlabel=targets_unknown[i]
                         outputs_unknown[i][nowlabel]=-1e9                 
-                    loss += criterion(outputs_unknown, gt_unknown) * args.unknown_weight   # Unknow class 11 i.e 10 index label loss calc
+                    loss += criterion(outputs_unknown, gt_unknown) * args.unknown_weight   
 
                     if epoch in args.start_epoch:
-                        # print(f"{epoch} dekha ")
                         targets_unknown_numpy = targets_unknown.cpu().data.numpy() 
                         for index in range(len(targets_unknown)):
                             if (PDs[index]>0):
                                 dict_key = targets_unknown_numpy[index]
-                                unknown_sample = inputs_unknown[index].clone().detach().view(1, -1) #( 256,4,4)  -> (1,4096)
+                                unknown_sample = inputs_unknown[index].clone().detach().view(1, -1) 
                                 if unknown_dict[dict_key] == None:
                                     unknown_dict[dict_key] = unknown_sample
                                 else:
                                     unknown_dict[dict_key] = torch.cat((unknown_dict[dict_key], unknown_sample),dim=0)
                     
                     if unknown_dis is not None:
-                        # print(f"{epoch} tumne dekha") 
                         sample_c = torch.randint(0, args.known_class, (args.sample_from,))
                         sample_num = {index: 0 for index in range(args.known_class)}
                         for it in sample_c:
@@ -116,7 +107,7 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
                                 # keep the data in the low density area.
                                 _, index_prob = torch.topk(- prob_density, sample_num[index])
                                 generated_unknown_samples = generated_unknown_samples[index_prob].to(device)
-                                generated_unknown_samples = generated_unknown_samples.reshape(sample_num[index], 3, 32, 32)
+                                generated_unknown_samples = generated_unknown_samples.reshape(sample_num[index], 192, 4, 4)
                                 generated_unknown_targets = (torch.ones(sample_num[index])*index).long().to(device) 
                                 if ood_samples is None:
                                     ood_samples = generated_unknown_samples
@@ -126,7 +117,7 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
                                     ood_targets = torch.cat((ood_targets, generated_unknown_targets), 0)
                                 del generated_unknown_samples
                         if ood_samples is not None and ood_samples.shape[0]>1:        
-                            outs_unknown = model.discrete_forward(ood_samples.clone().detach()) 
+                            outs_unknown = model.discrete_forward(ood_samples.clone().detach())      # model.discrete_forward(ood_samples.clone().detach()) 
                             outputs_unknown = outs_unknown['outputs'] 
                             gt_unknown=torch.ones(outputs_unknown.shape[0]).long().to(device)*args.known_class                
                             for i in range(len(outputs_unknown)):
@@ -140,45 +131,47 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
-        # print(outputs.shape)
         value , indices = output[:,:args.known_class].max(1)
 
         pred.extend(indices.cpu().numpy().tolist())
         label.extend(labels.cpu().numpy().tolist())
-        # output_list.append(F.softmax(outputs, dim=-1).cpu().detach().numpy())
 
         del img, loss
         gc.collect()
-    # loop ends
 
-    if epoch in args.start_epoch:
-        # print(f"{epoch} tumne dekha 2") 
+    if epoch in args.start_epoch: 
         for index in range(args.known_class):
             if unknown_dict[index] is not None:
-                mean_dict[index] = unknown_dict[index].mean(0).cpu()  
+                 mean_dict[index] = unknown_dict[index].mean(0).cpu()
+                 X = unknown_dict[index] - unknown_dict[index].mean(0)
+                 cov_matrix = torch.mm(X.t(), X) / len(X)
+                 cov_dict[index] = cov_matrix.cpu()
+                 number_dict[index] =  len(X)
+                 del cov_matrix, X
+                # mean_dict[index] = unknown_dict[index].mean(0).cpu()  
 
-                X = unknown_dict[index] - mean_dict[index].to(unknown_dict[index].device)   # Broadcasting
-                X = X.to(dtype=torch.float16)   #(is_boundary.sum(), 4096)
-                # print(X.shape)
-                chunk_size = 512
-                cov_matrix = torch.zeros((X.shape[1], X.shape[1]), device=X.device, dtype=X.dtype)
+                # X = unknown_dict[index] - mean_dict[index].to(unknown_dict[index].device)   # Broadcasting
+                # X = X.to(dtype=torch.float16)   #(is_boundary.sum(), 4096)
+                # # print(X.shape)
+                # chunk_size = 512
+                # cov_matrix = torch.zeros((X.shape[1], X.shape[1]), device=X.device, dtype=X.dtype)
 
-                for i in range(0, X.shape[1], chunk_size):
-                    for j in range(0, X.shape[1], chunk_size):
-                        X_chunk_i = X[:, i:i+chunk_size]
-                        X_chunk_j = X[:, j:j+chunk_size]
-                        cov_matrix[i:i+chunk_size, j:j+chunk_size] = torch.mm(X_chunk_i.t(), X_chunk_j) / len(X)  # (4096, 4096)  
+                # for i in range(0, X.shape[1], chunk_size):
+                #     for j in range(0, X.shape[1], chunk_size):
+                #         X_chunk_i = X[:, i:i+chunk_size]
+                #         X_chunk_j = X[:, j:j+chunk_size]
+                #         cov_matrix[i:i+chunk_size, j:j+chunk_size] = torch.mm(X_chunk_i.t(), X_chunk_j) / len(X)  # (4096, 4096)  
 
 
-                    del X_chunk_i,  X_chunk_j 
-                    torch.cuda.empty_cache()
+                #     del X_chunk_i,  X_chunk_j 
+                #     torch.cuda.empty_cache()
 
-                cov_dict[index] = cov_matrix.cpu().pin_memory()  # Moving to cpu only after computing the cov_matrix
-                number_dict[index] = len(X)   # List of size args.known_class
+                # cov_dict[index] = cov_matrix.cpu().pin_memory()  # Moving to cpu only after computing the cov_matrix
+                # number_dict[index] = len(X)   # List of size args.known_class
 
-                del X, cov_matrix
-                gc.collect()
-                torch.cuda.empty_cache()
+                # del X, cov_matrix
+                # gc.collect()
+                # torch.cuda.empty_cache()
 
 
                                
@@ -192,9 +185,9 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
         del unknown_dict
         gc.collect()
         
-        mean_dict = torch.stack(mean_dict, dim = 0)    # Add dimension mean_dict list of args.known_class element wth shape (4096,) to-> (n,4096)
+        mean_dict = torch.stack(mean_dict, dim = 0)   
 
-        cov_dict = torch.stack(cov_dict, dim = 0)    # n, (4096, 4096)  ---> (n,4096, 4096)
+        cov_dict = torch.stack(cov_dict, dim = 0)    
 
     for peer_net in net_peers:        
         peer_net.train()          
@@ -210,9 +203,9 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
               'f1': f1_macro,
               'recall':recall_macro,
               'precision': precision,
-              'mean_dict' : mean_dict,         # (args.known_class,4096)
-              'cov_dict' : cov_dict,            # (args.known_class,4096, 4096)
-              'number_dict' : number_dict       # List of args.known_class
+              'mean_dict' : mean_dict,        
+              'cov_dict' : cov_dict,            
+              'number_dict' : number_dict       
               }
     
     return result
@@ -270,7 +263,6 @@ def test(args, device, epoch, net, closerloader, openloader, threshold=0):
         
         for batch_idx, (inputs, targets) in enumerate(closerloader):
             inputs, targets = inputs.to(device), targets.long().to(device)
-            print(inputs.shape, targets.shape, "cloeloader" )
             net = net.to(device)
             outs = net(inputs)
             outputs = outs['outputs']    
@@ -310,7 +302,6 @@ def test(args, device, epoch, net, closerloader, openloader, threshold=0):
             targets_list.append(targets.cpu().numpy())
         
         for batch_idx, (inputs, targets) in enumerate(openloader):
-            print(inputs.shape, targets.shape, "openloader" )
             inputs, targets = inputs.to(device), targets.to(device)
             outs = net(inputs)
             outputs = outs['outputs']
@@ -357,7 +348,7 @@ def train_clients(args, epoch, device, models, trainloaders, optimizers, attack,
         
         train_result = train(args, device, epoch, model, train_loader, optimizer, 
                              models[:client_idx] + models[client_idx+1:], attack, unknown_dis)
-        # args, device, epoch, model, trainloader, optimizer, net_peers=None, unknown_dis = None)
+    
         
         print(f"Train {client_name} [{epoch}/{args.epoches}] LR={args.lr:.7f} "
               f"loss={train_result['loss']:.3f} ACC={train_result['acc']:.3f} "
@@ -369,7 +360,7 @@ def train_clients(args, epoch, device, models, trainloaders, optimizers, attack,
             cov_clients.append(train_result['cov_dict'])
             number_clients.append(train_result['number_dict'])
     
-    return mean_clients, cov_clients, number_clients    #Return list of args.num_client elements
+    return mean_clients, cov_clients, number_clients    
 
 def evaluate_and_save(args, epoch, device, server_model, closerloader, openloader, best_f1, best_epoch):
     """Evaluate the model and save the best checkpoint."""
@@ -418,7 +409,7 @@ def main_training_loop(args):
         
         for ws in range(args.worker_steps):
             mean_clients, cov_clients, number_clients = train_clients(
-                args, epoch_it, device, models, trainloaders, optimizers, attack, unknown_dis)     # return -> list of args.num_clients element with shape (args.known_class, 4096,), (args.known_class, 4096, 4096,), list of args.known_class
+                args, epoch_it, device, models, trainloaders, optimizers, attack, unknown_dis)    
         
         server_model, models, unknown_dis = communication_Finetune(
             args, server_model, models, client_weights, mean_clients, cov_clients, number_clients, unknown_dis)

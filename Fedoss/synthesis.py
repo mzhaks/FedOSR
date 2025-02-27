@@ -30,20 +30,6 @@ class Attack:
         self.known_class = known_class
 
     def DUS(self, model, inputs, targets, eps=0.03):
-        """
-        Implements the Direct Uncertainty Sampling (DUS) attack.
-        Generates an adversarial example using a single-step attack.
-
-        Args:
-            model (torch.nn.Module): The target model.
-            inputs (torch.Tensor): Input samples.
-            targets (torch.Tensor): Corresponding labels.
-            eps (float, optional): Perturbation magnitude. Defaults to 0.03.
-
-        Returns:
-            torch.Tensor: Adversarial inputs.
-            torch.Tensor: Model outputs for adversarial inputs.
-        """
         x_adv = Variable(inputs.clone().detach(), requires_grad=True)
         model.eval()  # Set model to evaluation mode
         outputs = model(x_adv)
@@ -55,7 +41,6 @@ class Attack:
         if x_adv.grad is not None:
             x_adv.grad.data.zero_()
 
-        # Backpropagate the loss
         loss.backward()
 
         # Compute adversarial perturbation
@@ -69,27 +54,14 @@ class Attack:
         return x_adv, adv_outputs
 
     def i_DUS(self, model, inputs, targets):
-        """
-        Implements Iterative Direct Uncertainty Sampling (i_DUS).
-        Generates adversarial examples using an iterative approach.
-
-        Args:
-            model (torch.nn.Module): The target model.
-            inputs (torch.Tensor): Input samples.
-            targets (torch.Tensor): Corresponding labels.
-
-        Returns:
-            torch.Tensor: Adversarial inputs.
-            torch.Tensor: Corresponding adversarial targets.
-        """
-        x_adv = inputs.clone().detach() # (is_boundary.sum(), 256, 4, 4)
+        x_adv = inputs.clone().detach() 
         model.eval()  # Set model to evaluation mode
 
         for _ in range(self.num_steps):
             x_adv = x_adv.clone().detach().requires_grad_(True)
 
             # Get model output
-            outputs = model.discrete_forward(x_adv)["outputs"]  # shape (is_boundary.sum(), 11)
+            outputs = model.discrete_forward(x_adv)["outputs"]  
 
             # Compute adversarial loss
             loss = -self.criterion(outputs, targets)
@@ -106,4 +78,4 @@ class Attack:
             x_adv = torch.clamp(x_adv, self.x_val_min, self.x_val_max)  # Clip values
 
         model.train()  # Switch model back to training mode
-        return x_adv.detach(), targets.detach()  #(batch, 256,4,4),  (batch,)
+        return x_adv.detach(), targets.detach()  
