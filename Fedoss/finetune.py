@@ -138,13 +138,14 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
 
         del img, loss
         gc.collect()
-
+    eps= 1e-5  # epsilon to make cov_matrix positive definite
     if epoch in args.start_epoch: 
         for index in range(args.known_class):
             if unknown_dict[index] is not None:
                  mean_dict[index] = unknown_dict[index].mean(0).cpu()
                  X = unknown_dict[index] - unknown_dict[index].mean(0)
                  cov_matrix = torch.mm(X.t(), X) / len(X)
+                 cov_matrix += torch.eye(cov_matrix.shape[0], device=cov_matrix.device) * eps
                  cov_dict[index] = cov_matrix.cpu()
                  number_dict[index] =  len(X)
                  del cov_matrix, X
