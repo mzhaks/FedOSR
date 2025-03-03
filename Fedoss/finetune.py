@@ -138,16 +138,25 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
 
         del img, loss
         gc.collect()
-
+    eps= 1e-5  # epsilon to make cov_matrix positive definite
     if epoch in args.start_epoch: 
         for index in range(args.known_class):
             if unknown_dict[index] is not None:
-                 mean_dict[index] = unknown_dict[index].mean(0).cpu()
-                 X = unknown_dict[index] - unknown_dict[index].mean(0)
-                 cov_matrix = torch.mm(X.t(), X) / len(X)
-                 cov_dict[index] = cov_matrix.cpu()
-                 number_dict[index] =  len(X)
-                 del cov_matrix, X
+                mean_dict[index] = unknown_dict[index].mean(0).cpu()
+                X = unknown_dict[index] - unknown_dict[index].mean(0)
+
+                # Compute covariance matrix
+                cov_matrix = torch.mm(X.t(), X) / len(X)
+
+                # Eigenvalue decomposition for positive definiteness
+                eigenvalues, eigenvectors = torch.linalg.eigh(cov_matrix)
+                eigenvalues = torch.maximum(eigenvalues, torch.tensor(eps, device=eigenvalues.device))
+                cov_matrix = eigenvectors @ torch.diag(eigenvalues) @ eigenvectors.T
+
+                cov_dict[index] = cov_matrix.cpu()
+                number_dict[index] = len(X)
+
+                del cov_matrix, X
                 # mean_dict[index] = unknown_dict[index].mean(0).cpu()  
 
                 # X = unknown_dict[index] - mean_dict[index].to(unknown_dict[index].device)   # Broadcasting
