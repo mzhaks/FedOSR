@@ -149,10 +149,10 @@ def train(args, device, epoch, model, trainloader, optimizer, net_peers=None, at
                 cov_matrix = torch.mm(X.t(), X) / len(X)
                 # cov_matrix += torch.eye(cov_matrix.shape[0], cov_matrix.device())*eps
                 cov_dict[index] = cov_matrix.float().cpu()
+                torch.cuda.empty_cache()
                 number_dict[index] = len(X)
 
                 del cov_matrix, X
-                torch.cuda.empty_cache()
                 # mean_dict[index] = unknown_dict[index].mean(0).cpu()  
 
                 # X = unknown_dict[index] - mean_dict[index].to(unknown_dict[index].device)   # Broadcasting
