@@ -52,8 +52,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--eps', type=float, default=1., help='Epsilon for attack')
     parser.add_argument('--num_steps', type=int, default=10, help='Number of steps for attack')
     parser.add_argument('--unknown_weight', type=float, default=1., help='Weight for unknown classes')
-    parser.add_argument('--start_epoch', type=str, default=[2, 4, 8, 10, 12], help='Epochs to start from')
+    parser.add_argument('--start_epoch', type=str, default=[0, 1, 8, 10, 12], help='Epochs to start from')
     parser.add_argument('--sample_from', type=int, default=8, help='Sample from')
+    parser.add_argument('--model', type=str, default='resnet18', help='Model architect resnet18/resnet9')
+    parser.add_argument('--setting', type=int, default=1, help='Known-Unknown Dataset Partition')
     return parser.parse_args()
 
 def main():

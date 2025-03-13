@@ -338,7 +338,7 @@ def test(args, device, epoch, net, closerloader, openloader, threshold=0):
 def initialize(args):
     """Initialize data loaders, models, device, and attack instance."""
     trainloaders, valloader, closerloader, openloader = get_dataloaders(
-        args.num_client, args.data_root, 42)
+        args.num_client, args.data_root, 42, args)
     server_model, models, device, client_weights = setup(args, trainloaders)
     attack = Attack(known_class=args.known_class, eps=args.eps, num_steps=args.num_steps)
     return trainloaders, closerloader, openloader, server_model, models, device, client_weights, attack
