@@ -177,7 +177,7 @@ def test(args, device, epoch, net, closerloader, openloader, threshold=0):
 
 def train_federated_model(args):
     # Load datasets and initialize models
-    loaders = get_dataloaders(args.num_client, args.data_root, 42)
+    loaders = get_dataloaders(args.num_client, args.data_root, 42, args)
     trainloaders, valloader, closerloader, openloader = loaders
     
     server_model, models, device, client_weights = setup(args, trainloaders)

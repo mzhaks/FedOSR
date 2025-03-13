@@ -217,8 +217,8 @@ class ResNet(nn.Module):
 
 
 
-def _resnet(arch, pretrained_path=None, **kwargs):
-    model = ResNet(BasicBlock,[2,2,2,2],**kwargs) 
+def _resnet(arch_layers, pretrained_path=None, **kwargs):
+    model = ResNet(BasicBlock,arch_layers,**kwargs) 
 
     if pretrained_path:
         try:
@@ -236,7 +236,10 @@ def _resnet(arch, pretrained_path=None, **kwargs):
     return model
 
 def resnet18(pretrained_path=None, num_classes=7, **kwargs):
-    return _resnet('resnet18', pretrained_path=pretrained_path, num_classes=num_classes, **kwargs)
+    return _resnet([2,2,2,2], pretrained_path=pretrained_path, num_classes=num_classes, **kwargs)
+
+def resnet9(pretrained_path=None, num_classes=7, **kwargs):
+    return _resnet([1,1,1,1], pretrained_path=pretrained_path, num_classes=num_classes, **kwargs)
 
 
 model = resnet18()

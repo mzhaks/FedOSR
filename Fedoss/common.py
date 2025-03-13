@@ -1,4 +1,4 @@
-from .model import resnet18
+from .model import resnet18, resnet9
 import numpy as np
 import torch
 from copy import deepcopy
@@ -19,7 +19,10 @@ def setup(args, trainloaders):
     
         server_model_path = os.path.join(base, generate_model_name(args))
         server_model_path = os.path.abspath(server_model_path)
-        server_model = resnet18(num_classes=args.known_class)
+        if args.model == 'resnet18':
+            server_model = resnet18(num_classes=args.known_class)
+        elif args.model == 'resnet9':
+            server_model = resnet9(num_classes=args.known_class)
         
         if os.path.exists(server_model_path):
             server_model.load_state_dict(torch.load(server_model_path, map_location=device))
