@@ -365,7 +365,15 @@ def train_clients(args, epoch, device, models, trainloaders, optimizers, attack,
             cov_clients.append(train_result['cov_dict'])
             number_clients.append(train_result['number_dict'])
     
-    return mean_clients, cov_clients, number_clients    
+    return mean_clients, cov_clients, number_clients   
+
+def log_metrics(stage, client_name, epoch, total_epochs, lr, metrics):
+    print(
+        f"{stage} {client_name} [{epoch}/{total_epochs}] LR={lr:.7f} "
+        f"ACCUracy={metrics['acc']:.3f}% "
+        f"F1={metrics['f1']:.3f}% Recall={metrics['recall']:.3f}% "
+        f"Precision={metrics['precision']:.3f}%"
+    ) 
 
 def evaluate_and_save(args, epoch, device, server_model, closerloader, openloader, best_f1, best_epoch):
     """Evaluate the model and save the best checkpoint."""
@@ -379,6 +387,15 @@ def evaluate_and_save(args, epoch, device, server_model, closerloader, openloade
           f"loss={close_test_result['loss']:.3f} ACC={close_test_result['acc']:.3f} "
           f"F1={close_test_result['f1']:.3f} Rec={close_test_result['recall']:.3f} "
           f"Prec={close_test_result['precision']:.3f}")
+    # Compute the average of Test-OSR and Test-Close for F1, Precision, and Recall
+    avg_metrics = {
+        'acc': (osr_result['acc'] + close_test_result['acc']) / 2,  
+        'f1': (osr_result['f1'] + close_test_result['f1']) / 2,
+        'precision': (osr_result['precision'] + close_test_result['precision']) / 2,
+        'recall': (osr_result['recall'] + close_test_result['recall']) / 2
+    }
+
+    log_metrics("Test-Avg", "Server", epoch, args.epoches, args.lr, avg_metrics)
 
     if osr_f1 > best_f1:
         best_epoch, best_f1 = epoch, osr_f1

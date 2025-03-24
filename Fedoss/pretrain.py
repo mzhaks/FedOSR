@@ -158,11 +158,11 @@ def test(args, device, epoch, net, closerloader, openloader, threshold=0):
     targets_list = np.concatenate(targets_list, axis=0)
     pred_list = prob_total.argmax(dim=1).cpu().numpy()
     
-    mean_acc = 100 * metrics.accuracy_score(targets_list, pred_list)
-    precision = 100 * metrics.precision_score(targets_list, pred_list, average='macro', zero_division=0)
-    recall = 100 * metrics.recall_score(targets_list, pred_list, average='macro', zero_division=0)
-    f1 = 100 * metrics.f1_score(targets_list, pred_list, average='macro', zero_division=0)
-    conf_matrix = metrics.confusion_matrix(targets_list, pred_list)
+    mean_acc = 100* metrics.accuracy_score(targets_list, pred_list)
+    precision =  100*metrics.precision_score(targets_list, pred_list, average='macro', zero_division=0)
+    recall = 100* metrics.recall_score(targets_list, pred_list, average='macro', zero_division=0)
+    f1 = 100*metrics.f1_score(targets_list, pred_list, average='macro', zero_division=0)
+    conf_matrix = 100*metrics.confusion_matrix(targets_list, pred_list)
     
     osr_result = {
         'acc': mean_acc,
@@ -214,9 +214,9 @@ def train_federated_model(args):
 def log_metrics(stage, client_name, epoch, total_epochs, lr, metrics):
     print(
         f"{stage} {client_name} [{epoch}/{total_epochs}] LR={lr:.7f} "
-        f"ACC={metrics['acc']:.3f} "
-        f"F1={metrics['f1']:.3f} Rec={metrics['recall']:.3f} "
-        f"Prec={metrics['precision']:.3f}"
+        f"ACCUracy={metrics['acc']:.3f}% "
+        f"F1={metrics['f1']:.3f}% Recall={metrics['recall']:.3f}% "
+        f"Precision={metrics['precision']:.3f}%"
     )
 
 def save_models(args, epoch, server_model, models, closerloader, openloader):
@@ -231,6 +231,16 @@ def save_models(args, epoch, server_model, models, closerloader, openloader):
     
     log_metrics("Test-OSR", "Server", epoch, args.epoches, args.lr, osr_result)
     log_metrics("Test-Close", "Server", epoch, args.epoches, args.lr, close_test_result)
+
+    # Compute the average of Test-OSR and Test-Close for F1, Precision, and Recall
+    avg_metrics = {
+        'acc': (osr_result['acc'] + close_test_result['acc']) / 2,  # If needed
+        'f1': (osr_result['f1'] + close_test_result['f1']) / 2,
+        'precision': (osr_result['precision'] + close_test_result['precision']) / 2,
+        'recall': (osr_result['recall'] + close_test_result['recall']) / 2
+    }
+
+    log_metrics("Test-Avg", "Server", epoch, args.epoches, args.lr, avg_metrics)
 
 def generate_model_name(args, epoch, client_idx=None):
     name = f"best_ckpt_{args.mode}_known_{args.known_class}_unknown_{args.unknown_class}_seed_{args.seed}"
